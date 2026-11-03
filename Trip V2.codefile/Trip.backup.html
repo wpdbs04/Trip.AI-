@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 맞춤형 여행 경로 플래너</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome 아이콘 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    body { font-family: 'Pretendard', sans-serif; background-color: #f8fafc; }
+    
+    /* 인쇄(Print) 시 불필요한 버튼 및 헤더 숨김 처리 */
+    @media print {
+      .no-print { display: none !important; }
+      body { background-color: #ffffff; }
+      .print-container { box-shadow: none !important; border: none !important; width: 100% !important; max-width: 100% !important; padding: 0 !important; }
+    }
+  </style>
+</head>
+<body class="text-slate-800">
+
+  <!-- 상단 네비게이션 -->
+  <header class="bg-white shadow-sm sticky top-0 z-50 no-print">
+    <div class="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <i class="fa-solid fa-route text-indigo-600 text-2xl"></i>
+        <h1 class="text-xl font-bold text-slate-900">AI Travel Planner</h1>
+      </div>
+      <!-- 진행 단계 표시 -->
+      <div class="flex items-center space-x-4 text-sm font-medium">
+        <span id="nav-step1" class="text-indigo-600 font-bold">1. 조건 입력</span>
+        <i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
+        <span id="nav-step2" class="text-slate-400">2. 장소 확정/보류</span>
+        <i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
+        <span id="nav-step3" class="text-slate-400">3. 최종 루트/출력</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 메인 컨테이너 -->
+  <main class="max-w-4xl mx-auto px-4 py-8">
+
+    <!-- ================= STEP 1: 초기 조건 입력 ================= -->
+    <section id="step1-section" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
+      <h2 class="text-2xl font-bold mb-2">어떤 여행을 계획 중이신가요?</h2>
+      <p class="text-slate-500 mb-6 text-sm">원하는 조건을 입력하시면 AI가 최적의 동선과 맛집, 관광지를 추천해 드립니다.</p>
+
+      <form id="travel-form" class="space-y-6" onsubmit="handleFormSubmit(event)">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- 여행지 -->
+          <div>
+            <label class="block text-sm font-semibold mb-2">여행지 (도시/지역)</label>
+            <div class="relative">
+              <i class="fa-solid fa-location-dot absolute left-3.5 top-3.5 text-slate-400"></i>
+              <input type="text" id="destination" value="제주도 애월/제주시" required
+                class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+          </div>
+
+          <!-- 숙소 위치 -->
+          <div>
+            <label class="block text-sm font-semibold mb-2">숙소 위치 (출발/복귀 기준)</label>
+            <div class="relative">
+              <i class="fa-solid fa-hotel absolute left-3.5 top-3.5 text-slate-400"></i>
+              <input type="text" id="accommodation" value="제주 국제공항 근처 호텔" required
+                class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+          </div>
+
+          <!-- 여행 기간 -->
+          <div>
+            <label class="block text-sm font-semibold mb-2">여행 시작일 ~ 종료일</label>
+            <div class="flex items-center space-x-2">
+              <input type="date" id="start-date" value="2026-11-10" required
+                class="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <span class="text-slate-400">~</span>
+              <input type="date" id="end-date" value="2026-11-11" required
+                class="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+          </div>
+
+          <!-- 일일 활동 시간 -->
+          <div>
+            <label class="block text-sm font-semibold mb-2">여행 시작 시간 및 숙소 복귀 시간</label>
+            <div class="flex items-center space-x-2">
+              <input type="time" id="start-time" value="09:00" required
+                class="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <span class="text-slate-400">~</span>
+              <input type="time" id="end-time" value="20:00" required
+                class="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+          </div>
+
+          <!-- 식사 횟수 -->
+          <div>
+            <label class="block text-sm font-semibold mb-2">하루 식사 횟수</label>
+            <select id="meal-count" class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <option value="2">하루 2끼 (아점 + 저녁 또는 점심 + 저녁)</option>
+              <option value="3" selected>하루 3끼 (아침 + 점심 + 저녁)</option>
+              <option value="1">하루 1끼 (맛집 위주 가벼운 일정)</option>
+            </select>
+          </div>
+
+          <!-- 교통수단 선택 -->
+          <div>
+            <label class="block text-sm font-semibold mb-2">주요 이동 교통수단</label>
+            <div class="grid grid-cols-3 gap-2">
+              <label class="cursor-pointer">
+                <input type="radio" name="transport" value="자가용(렌터카)" class="peer sr-only" checked>
+                <div class="text-center py-2.5 border border-slate-300 rounded-lg peer-checked:bg-indigo-50 peer-checked:border-indigo-600 peer-checked:text-indigo-600 font-medium text-sm transition">
+                  <i class="fa-solid fa-car mr-1"></i> 자가용
+                </div>
+              </label>
+              <label class="cursor-pointer">
+                <input type="radio" name="transport" value="대중교통" class="peer sr-only">
+                <div class="text-center py-2.5 border border-slate-300 rounded-lg peer-checked:bg-indigo-50 peer-checked:border-indigo-600 peer-checked:text-indigo-600 font-medium text-sm transition">
+                  <i class="fa-solid fa-bus mr-1"></i> 대중교통
+                </div>
+              </label>
+              <label class="cursor-pointer">
+                <input type="radio" name="transport" value="택시" class="peer sr-only">
+                <div class="text-center py-2.5 border border-slate-300 rounded-lg peer-checked:bg-indigo-50 peer-checked:border-indigo-600 peer-checked:text-indigo-600 font-medium text-sm transition">
+                  <i class="fa-solid fa-taxi mr-1"></i> 택시
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition shadow-md hover:shadow-lg flex justify-center items-center space-x-2">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>AI 맞춤 여행 경로 생성하기</span>
+        </button>
+      </form>
+    </section>
+
+
+    <!-- ================= STEP 2: AI 추천 리스트 (확정 및 보류/차선책) ================= -->
+    <section id="step2-section" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 border-b border-slate-100 pb-4">
+          <div>
+            <span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full">AI 초안 완성</span>
+            <h2 class="text-2xl font-bold mt-2">제안된 여행지를 확인해 주세요</h2>
+            <p class="text-slate-500 text-sm mt-1">마음에 드는 곳은 <b class="text-emerald-600">[확정]</b>, 다른 곳으로 바꾸고 싶다면 <b class="text-amber-600">[보류 (차선책 보기)]</b>를 눌러주세요.</p>
+          </div>
+          <button onclick="goToStep(1)" class="self-start md:self-center text-sm text-slate-500 hover:text-slate-800 underline">
+            <i class="fa-solid fa-rotate-left mr-1"></i>조건 다시 입력
+          </button>
+        </div>
+
+        <!-- 추가 수정 요청 프롬프트 바 -->
+        <div class="mt-4 flex gap-2">
+          <input type="text" id="ai-reprompt" placeholder="예: 비가 올 것 같으니 실내 관광지 위주로 바꿔줘, 해산물 식당은 제외해줘 등" 
+            class="flex-1 px-4 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-500">
+          <button onclick="alert('실제 구현 시 입력한 프롬프트를 백엔드(LLM)로 전송하여 리스트를 재구성합니다.')" 
+            class="bg-slate-800 hover:bg-slate-900 text-white text-sm px-4 py-2 rounded-lg font-medium transition whitespace-nowrap">
+            AI 재요청
+          </button>
+        </div>
+      </div>
+
+      <!-- 장소 카드 리스트가 렌더링될 영역 -->
+      <div id="places-container" class="space-y-4"></div>
+
+      <!-- 하단 확정 버튼 -->
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center sticky bottom-4">
+        <div class="text-sm">
+          현재 확정된 장소: <span id="confirmed-count" class="font-bold text-indigo-600">0</span> / <span id="total-count">0</span>곳
+        </div>
+        <button onclick="finalizeRoute()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-3 rounded-xl transition shadow-md">
+          이대로 최종 여행 루트 생성하기 <i class="fa-solid fa-arrow-right ml-1"></i>
+        </button>
+      </div>
+    </section>
+
+
+    <!-- ================= STEP 3: 최종 여행 루트 및 출력 ================= -->
+    <section id="step3-section" class="hidden">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 print-container">
+        
+        <!-- 상단 타이틀 및 인쇄 버튼 -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-200 pb-6 mb-6 gap-4">
+          <div>
+            <span id="final-transport-badge" class="bg-slate-100 text-slate-700 text-xs font-semibold px-3 py-1 rounded-full"></span>
+            <h2 id="final-title" class="text-2xl md:text-3xl font-bold mt-2">제주도 맞춤형 여행 일정표</h2>
+            <p id="final-subtitle" class="text-slate-500 text-sm mt-1"></p>
+          </div>
+          <div class="flex space-x-2 no-print">
+            <button onclick="goToStep(2)" class="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 transition">
+              <i class="fa-solid fa-pen mr-1"></i>장소 다시 수정
+            </button>
+            <button onclick="window.print()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition shadow-sm">
+              <i class="fa-solid fa-print mr-1"></i>일정표 인쇄 / PDF 저장
+            </button>
+          </div>
+        </div>
+
+        <!-- 타임라인 렌더링 영역 -->
+        <div id="final-timeline" class="space-y-8"></div>
+
+        <!-- 하단 안내 문구 -->
+        <div class="mt-8 pt-6 border-t border-slate-100 text-center text-xs text-slate-400">
+          본 일정표는 AI 맞춤형 여행 경로 추천 서비스에 의해 생성되었습니다. 실제 이동 시간은 교통 상황에 따라 달라질 수 있습니다.
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= 자바스크립트 로직 ================= -->
+  <script>
+    // 프로토타입용 샘플 데이터베이스 (실제 구현 시 백엔드 API 응답 데이터)
+    let itineraryData = [
+      {
+        id: 1,
+        day: "Day 1",
+        time: "09:30",
+        type: "식당 (아침)",
+        name: "우진해장국",
+        desc: "제주 향토 음식인 고사리 육개장 맛집. 숙소에서 차로 10분 거리.",
+        duration: "1시간",
+        nextMove: "이동 25분",
+        status: "confirmed", // 'confirmed' | 'hold'
+        alternatives: [
+          { name: "자매국수", desc: "진한 육수의 제주 고기국수 전문점", type: "식당 (아침)" },
+          { name: "모이세해장국", desc: "웨이팅이 비교적 적은 깔끔한 선지해장국", type: "식당 (아침)" }
+        ]
+      },
+      {
+        id: 2,
+        day: "Day 1",
+        time: "11:00",
+        type: "관광지",
+        name: "애월 한담해안산책로",
+        desc: "투명한 바다를 따라 걷기 좋은 해안 산책 코스.",
+        duration: "1시간 30분",
+        nextMove: "이동 10분",
+        status: "confirmed",
+        alternatives: [
+          { name: "하귀애월해안도로", desc: "드라이브하며 바다를 감상하기 좋은 코스", type: "관광지" },
+          { name: "곽지해수욕장", desc: "과물노천탕과 넓은 백사장이 있는 해변", type: "관광지" }
+        ]
+      },
+      {
+        id: 3,
+        day: "Day 1",
+        time: "13:00",
+        type: "식당 (점심)",
+        name: "애월 갈치조림 본점",
+        desc: "통갈치조림과 성게미역국 정식이 유명한 오션뷰 식당.",
+        duration: "1시간 20분",
+        nextMove: "이동 15분",
+        status: "hold", // 초기 예시를 위해 보류 상태로 설정
+        alternatives: [
+          { name: "숙성도 애월점", desc: "육즙이 풍부한 교차숙성 흑돼지 구이 맛집", type: "식당 (점심)" },
+          { name: "노라바", desc: "바다를 보며 먹는 얼큰한 해물라면 전문점", type: "식당 (점심)" }
+        ]
+      },
+      {
+        id: 4,
+        day: "Day 1",
+        time: "15:00",
+        type: "카페/휴식",
+        name: "새별오름 & 근처 베이커리 카페",
+        desc: "억새가 아름다운 오름 산책 후 여유로운 커피 타임.",
+        duration: "2시간",
+        nextMove: "이동 20분",
+        status: "confirmed",
+        alternatives: [
+          { name: "아르떼뮤지엄 제주", desc: "날씨에 구애받지 않는 몰입형 미디어아트 전시관", type: "실내 관광지" },
+          { name: "카멜리아힐", desc: "사계절 다양한 꽃과 산책로가 조성된 수목원", type: "관광지" }
+        ]
+      },
+      {
+        id: 5,
+        day: "Day 1",
+        time: "18:00",
+        type: "식당 (저녁)",
+        name: "동문재래시장 야시장 투어",
+        desc: "딱새우회, 흑돼지 강정 등 다양한 먹거리를 즐길 수 있는 시장.",
+        duration: "1시간 30분",
+        nextMove: "숙소 복귀 (15분)",
+        status: "confirmed",
+        alternatives: [
+          { name: "제주 김만복 본점", desc: "전복김밥과 오징어무침 테이크아웃 전문점", type: "식당 (저녁)" },
+          { name: "삼대국수회관", desc: "늦은 저녁까지 운영하는 고기국수 및 돔베고기 식당", type: "식당 (저녁)" }
+        ]
+      }
+    ];
+
+    // Step 전환 함수
+    function goToStep(stepNumber) {
+      document.getElementById('step1-section').classList.add('hidden');
+      document.getElementById('step2-section').classList.add('hidden');
+      document.getElementById('step3-section').classList.add('hidden');
+
+      document.getElementById(`step${stepNumber}-section`).classList.remove('hidden');
+
+      // 네비게이션 스타일 업데이트
+      for (let i = 1; i <= 3; i++) {
+        const nav = document.getElementById(`nav-step${i}`);
+        if (i === stepNumber) {
+          nav.className = "text-indigo-600 font-bold";
+        } else {
+          nav.className = "text-slate-400";
+        }
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Step 1 폼 제출 시 실행
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      renderStep2Places();
+      goToStep(2);
+    }
+
+    // Step 2: 장소 리스트 렌더링 (확정 / 보류 및 차선책 UI)
+    function renderStep2Places() {
+      const container = document.getElementById('places-container');
+      container.innerHTML = '';
+
+      let confirmedCount = 0;
+
+      itineraryData.forEach((item, index) => {
+        if (item.status === 'confirmed') confirmedCount++;
+
+        const isConfirmed = item.status === 'confirmed';
+        const cardBorder = isConfirmed ? 'border-emerald-500 bg-white' : 'border-amber-400 bg-amber-50/30';
+        const badgeColor = item.type.includes('식당') ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700';
+
+        // 대체 장소(차선책) HTML 생성
+        let alternativesHtml = '';
+        if (!isConfirmed) {
+          const altButtons = item.alternatives.map((alt, altIdx) => `
+            <div class="flex justify-between items-center bg-white p-3 rounded-lg border border-amber-200 hover:border-amber-400 transition">
+              <div>
+                <span class="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded mr-2">차선책 ${altIdx + 1}</span>
+                <span class="font-bold text-slate-800">${alt.name}</span>
+                <p class="text-xs text-slate-500 mt-1">${alt.desc}</p>
+              </div>
+              <button onclick="replacePlace(${index}, ${altIdx})" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-2 rounded-lg transition whitespace-nowrap ml-4">
+                이 장소로 변경
+              </button>
+            </div>
+          `).join('');
+
+          alternativesHtml = `
+            <div class="mt-4 pt-4 border-t border-amber-200">
+              <p class="text-xs font-bold text-amber-800 mb-2"><i class="fa-solid fa-lightbulb mr-1"></i>AI가 제안하는 대체 여행지 (선택 시 즉시 교체 및 확정됩니다)</p>
+              <div class="space-y-2">${altButtons}</div>
+            </div>
+          `;
+        }
+
+        const cardHtml = `
+          <div class="rounded-xl border-2 p-5 transition shadow-sm ${cardBorder}">
+            <div class="flex flex-col md:flex-row justify-between md:items-center gap-4">
+              <div>
+                <div class="flex items-center space-x-2">
+                  <span class="text-xs font-bold text-slate-400">${item.day} • ${item.time}</span>
+                  <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full ${badgeColor}">${item.type}</span>
+                  ${isConfirmed 
+                    ? '<span class="text-xs font-bold text-emerald-600"><i class="fa-solid fa-circle-check mr-1"></i>확정됨</span>' 
+                    : '<span class="text-xs font-bold text-amber-600"><i class="fa-solid fa-circle-pause mr-1"></i>보류 중 (차선책 선택 필요)</span>'}
+                </div>
+                <h3 class="text-lg font-bold text-slate-900 mt-1">${item.name}</h3>
+                <p class="text-sm text-slate-600 mt-0.5">${item.desc}</p>
+              </div>
+
+              <!-- 확정 / 보류 토글 버튼 -->
+              <div class="flex space-x-2 self-end md:self-center shrink-0">
+                <button onclick="setPlaceStatus(${index}, 'confirmed')" 
+                  class="px-4 py-2 rounded-lg text-sm font-bold transition flex items-center space-x-1 ${isConfirmed ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                  <i class="fa-solid fa-check"></i>
+                  <span>확정</span>
+                </button>
+                <button onclick="setPlaceStatus(${index}, 'hold')" 
+                  class="px-4 py-2 rounded-lg text-sm font-bold transition flex items-center space-x-1 ${!isConfirmed ? 'bg-amber-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                  <i class="fa-solid fa-repeat"></i>
+                  <span>보류 (차선책)</span>
+                </button>
+              </div>
+            </div>
+            ${alternativesHtml}
+          </div>
+        `;
+        container.insertAdjacentHTML('beforeend', cardHtml);
+      });
+
+      document.getElementById('confirmed-count').innerText = confirmedCount;
+      document.getElementById('total-count').innerText = itineraryData.length;
+    }
+
+    // 장소 확정/보류 상태 변경
+    function setPlaceStatus(index, status) {
+      itineraryData[index].status = status;
+      renderStep2Places();
+    }
+
+    // 보류된 장소를 차선책으로 교체
+    function replacePlace(itemIndex, altIndex) {
+      const currentItem = itineraryData[itemIndex];
+      const selectedAlt = currentItem.alternatives[altIndex];
+
+      // 기존 장소를 차선책 목록으로 이동시키고, 선택한 차선책을 메인으로 설정
+      const oldPlace = { name: currentItem.name, desc: currentItem.desc, type: currentItem.type };
+      
+      currentItem.name = selectedAlt.name;
+      currentItem.desc = selectedAlt.desc;
+      currentItem.type = selectedAlt.type;
+      currentItem.status = 'confirmed'; // 교체 즉시 확정 처리
+      currentItem.alternatives[altIndex] = oldPlace;
+
+      renderStep2Places();
+    }
+
+    // Step 3: 최종 루트 확정 및 타임라인 생성
+    function finalizeRoute() {
+      // 보류 중인 장소가 있는지 체크
+      const hasHold = itineraryData.some(item => item.status === 'hold');
+      if (hasHold) {
+        if (!confirm('아직 [보류] 상태인 여행지가 있습니다. 보류된 장소를 제외하고 확정된 장소만으로 루트를 생성할까요?')) {
+          return;
+        }
+      }
+
+      // 폼 입력값 가져오기
+      const dest = document.getElementById('destination').value;
+      const accom = document.getElementById('accommodation').value;
+      const startDate = document.getElementById('start-date').value;
+      const endDate = document.getElementById('end-date').value;
+      const startTime = document.getElementById('start-time').value;
+      const endTime = document.getElementById('end-time').value;
+      const transport = document.querySelector('input[name="transport"]:checked').value;
+
+      document.getElementById('final-title').innerText = `${dest} 맞춤형 여행 일정표`;
+      document.getElementById('final-subtitle').innerText = `여행 기간: ${startDate} ~ ${endDate} (일일 활동: ${startTime} ~ ${endTime}) | 기준 숙소: ${accom}`;
+      document.getElementById('final-transport-badge').innerHTML = `<i class="fa-solid fa-car-side mr-1"></i>주요 이동수단: ${transport}`;
+
+      const timelineContainer = document.getElementById('final-timeline');
+      timelineContainer.innerHTML = '';
+
+      // 확정된 장소만 필터링
+      const finalPlaces = itineraryData.filter(item => item.status === 'confirmed');
+
+      // 타임라인 HTML 조립
+      let timelineHtml = `
+        <div class="relative border-l-2 border-indigo-200 ml-4 md:ml-6 space-y-8 pb-4">
+          <!-- 출발지 (숙소) -->
+          <div class="relative pl-6">
+            <div class="absolute -left-2.5 top-1.5 w-5 h-5 bg-indigo-600 rounded-full border-4 border-white shadow"></div>
+            <p class="text-xs font-bold text-indigo-600">${startTime} 출발</p>
+            <h4 class="font-bold text-slate-800">숙소 출발 (${accom})</h4>
+          </div>
+      `;
+
+      finalPlaces.forEach((item, idx) => {
+        // 구글 맵스 및 네이버 블로그 검색 쿼리 URL 인코딩
+        const searchQuery = encodeURIComponent(`${dest} ${item.name}`);
+        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${searchQuery}`;
+        const naverBlogUrl = `https://search.naver.com/search.naver?where=view&sm=tab_jum&query=${searchQuery}`;
+
+        timelineHtml += `
+          <div class="relative pl-6">
+            <div class="absolute -left-2.5 top-1.5 w-5 h-5 bg-white border-4 border-indigo-600 rounded-full shadow"></div>
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 hover:shadow-md transition">
+              <div class="flex flex-col md:flex-row justify-between md:items-center gap-2">
+                <div>
+                  <span class="text-xs font-bold text-indigo-600">${item.time} (체류: ${item.duration})</span>
+                  <span class="text-xs bg-white border border-slate-200 px-2 py-0.5 rounded ml-2 text-slate-600">${item.type}</span>
+                  <h4 class="text-lg font-bold text-slate-900 mt-1">${idx + 1}. ${item.name}</h4>
+                  <p class="text-sm text-slate-600 mt-0.5">${item.desc}</p>
+                </div>
+                
+                <!-- 외부 링크 연결 버튼 (구글맵 / 네이버 블로그) -->
+                <div class="flex space-x-2 shrink-0 mt-2 md:mt-0 no-print">
+                  <a href="${googleMapsUrl}" target="_blank" 
+                    class="px-3 py-1.5 bg-white border border-slate-300 hover:border-blue-500 text-slate-700 hover:text-blue-600 rounded-lg text-xs font-semibold transition flex items-center shadow-sm">
+                    <i class="fa-solid fa-map-location-dot text-blue-500 mr-1.5"></i>구글 맵스
+                  </a>
+                  <a href="${naverBlogUrl}" target="_blank" 
+                    class="px-3 py-1.5 bg-white border border-slate-300 hover:border-green-500 text-slate-700 hover:text-green-600 rounded-lg text-xs font-semibold transition flex items-center shadow-sm">
+                    <i class="fa-solid fa-n text-green-500 mr-1.5"></i>네이버 블로그 후기
+                  </a>
+                </div>
+              </div>
+            </div>
+            <!-- 이동 소요 시간 표시 -->
+            <div class="mt-3 ml-2 text-xs font-semibold text-slate-400 flex items-center">
+              <i class="fa-solid fa-arrow-down-long mr-2 text-indigo-300"></i>
+              <span>${transport} ${item.nextMove}</span>
+            </div>
+          </div>
+        `;
+      });
+
+      // 도착지 (숙소 복귀)
+      timelineHtml += `
+          <div class="relative pl-6">
+            <div class="absolute -left-2.5 top-1.5 w-5 h-5 bg-slate-800 rounded-full border-4 border-white shadow"></div>
+            <p class="text-xs font-bold text-slate-500">${endTime} 일정 종료</p>
+            <h4 class="font-bold text-slate-800">숙소 복귀 (${accom})</h4>
+          </div>
+        </div>
+      `;
+
+      timelineContainer.innerHTML = timelineHtml;
+      goToStep(3);
+    }
+  </script>
+</body>
+</html>
