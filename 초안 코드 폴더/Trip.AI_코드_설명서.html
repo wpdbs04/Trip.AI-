@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trip.AI 코드 파일(초안) — 역할 및 코드 구조 상세 설명서</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 14mm 13mm 14mm 13mm;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    body {
+      margin: 0;
+      padding: 28px 16px 48px;
+      font-family: 'Pretendard', 'Malgun Gothic', '맑은 고딕', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 10pt;
+      line-height: 1.6;
+      color: #1e293b;
+      background: #e2e8f0;
+      word-break: keep-all;
+    }
+
+    /* 상단 액션 툴바 (인쇄/PDF 저장 시 자동 숨김) */
+    .toolbar {
+      max-width: 210mm;
+      margin: 0 auto 16px auto;
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 12px 20px;
+      border-radius: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.35);
+      border: 1px solid #334155;
+    }
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 9.5pt;
+      font-weight: 700;
+    }
+    .toolbar-badge {
+      background: #4f46e5;
+      color: #ffffff;
+      font-size: 8pt;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .btn-print {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #ffffff;
+      border: none;
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-size: 9.5pt;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.45);
+      transition: filter 0.15s;
+    }
+    .btn-print:hover {
+      filter: brightness(1.12);
+    }
+
+    /* A4 문서 시트 */
+    .a4-sheet {
+      max-width: 210mm;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 18mm 16mm;
+      border-radius: 8px;
+      box-shadow: 0 20px 45px -15px rgba(15, 23, 42, 0.25);
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .a4-sheet {
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border-radius: 0;
+      }
+    }
+
+    /* 상단 문서 헤더 배너 */
+    .doc-header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #312e81 100%);
+      color: #ffffff;
+      padding: 22px 26px;
+      border-radius: 12px;
+      margin-bottom: 18px;
+      border: 1px solid #3730a3;
+    }
+    .doc-badge {
+      display: inline-block;
+      font-size: 8pt;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      background: rgba(99, 102, 241, 0.28);
+      color: #c7d2fe;
+      border: 1px solid rgba(165, 180, 252, 0.4);
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+    .doc-title {
+      margin: 0 0 6px 0;
+      font-size: 18.5pt;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+    }
+    .doc-subtitle {
+      margin: 0 0 14px 0;
+      font-size: 9.5pt;
+      color: #cbd5e1;
+    }
+    .doc-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+      font-size: 8.5pt;
+      color: #e2e8f0;
+    }
+    .doc-meta span strong {
+      color: #a5b4fc;
+    }
+
+    /* 섹션 타이틀 */
+    h2.section-title {
+      font-size: 13pt;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 22px 0 8px 0;
+      padding-bottom: 6px;
+      border-bottom: 2px solid #4f46e5;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      page-break-after: avoid;
+    }
+    h2.section-title .sec-num {
+      background: #4f46e5;
+      color: #ffffff;
+      font-size: 8.5pt;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    h3.sub-title {
+      font-size: 10.8pt;
+      font-weight: 700;
+      color: #1e1b4b;
+      margin: 14px 0 6px 0;
+      padding-left: 8px;
+      border-left: 3.5px solid #6366f1;
+      page-break-after: avoid;
+    }
+    p {
+      margin: 0 0 8px 0;
+    }
+
+    /* 콜아웃 박스 */
+    .callout {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #4f46e5;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin: 10px 0 14px 0;
+      font-size: 9.2pt;
+      break-inside: avoid;
+    }
+    .callout.warn {
+      background: #fffbeb;
+      border-color: #fde68a;
+      border-left-color: #d97706;
+    }
+    .callout-title {
+      font-weight: 700;
+      color: #3730a3;
+      margin-bottom: 3px;
+    }
+    .callout.warn .callout-title {
+      color: #b45309;
+    }
+
+    /* 아키텍처 다이어그램 박스 */
+    .arch-box {
+      background: #0f172a;
+      color: #f8fafc;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin: 10px 0 14px 0;
+      break-inside: avoid;
+    }
+    .arch-title {
+      font-size: 8.5pt;
+      font-weight: 700;
+      color: #a5b4fc;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .arch-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.25fr 1.15fr 0.25fr 1.2fr;
+      align-items: center;
+      gap: 6px;
+    }
+    .arch-node {
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      padding: 9px 10px;
+      font-size: 8.3pt;
+    }
+    .arch-node.primary {
+      border-color: #818cf8;
+      background: rgba(49, 46, 129, 0.45);
+    }
+    .arch-node.proxy {
+      border-color: #34d399;
+      background: rgba(6, 78, 59, 0.4);
+    }
+    .arch-node-title {
+      font-weight: 800;
+      font-size: 9pt;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+    .arch-node-desc {
+      color: #cbd5e1;
+      line-height: 1.4;
+      font-size: 8pt;
+    }
+    .arch-arrow {
+      text-align: center;
+      font-size: 8pt;
+      color: #94a3b8;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    /* 역할 카드 그리드 */
+    .role-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 8px 0 14px 0;
+    }
+    .role-card {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 10px 12px;
+      break-inside: avoid;
+    }
+    .role-card-head {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 800;
+      font-size: 9.6pt;
+      color: #1e1b4b;
+      margin-bottom: 5px;
+    }
+    .role-badge {
+      font-size: 7.5pt;
+      font-weight: 800;
+      padding: 1.5px 6px;
+      border-radius: 4px;
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+    .role-card p {
+      margin: 0;
+      font-size: 8.8pt;
+      color: #334155;
+      line-height: 1.5;
+    }
+
+    /* 테이블 스타일 */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 14px 0;
+      font-size: 8.6pt;
+    }
+    tr {
+      break-inside: avoid;
+    }
+    th {
+      background: #eef2ff;
+      color: #1e1b4b;
+      font-weight: 800;
+      text-align: left;
+      padding: 7px 9px;
+      border: 1px solid #cbd5e1;
+      font-size: 8.6pt;
+    }
+    td {
+      padding: 6.5px 9px;
+      border: 1px solid #cbd5e1;
+      vertical-align: top;
+      color: #1e293b;
+      line-height: 1.48;
+    }
+    tbody tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+    code, .mono {
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 8.1pt;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 1px 4px;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+    }
+    .tag {
+      display: inline-block;
+      font-size: 7.5pt;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .tag-css { background: #fae8ff; color: #86198f; }
+    .tag-html { background: #e0f2fe; color: #075985; }
+    .tag-js { background: #fef3c7; color: #92400e; }
+    .tag-srv { background: #dcfce7; color: #166534; }
+
+    /* 리스트 */
+    ul.clean-list, ol.clean-list {
+      margin: 6px 0 12px 0;
+      padding-left: 20px;
+    }
+    ul.clean-list li, ol.clean-list li {
+      margin-bottom: 5px;
+      line-height: 1.52;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+
+    /* 푸터 */
+    .doc-footer {
+      margin-top: 20px;
+      padding-top: 10px;
+      border-top: 1px solid #cbd5e1;
+      display: flex;
+      justify-content: space-between;
+      font-size: 8pt;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="toolbar no-print">
+    <div class="toolbar-left">
+      <span class="toolbar-badge">A4 PDF 양식</span>
+      <span>Trip.AI 코드 파일(초안) — 역할 및 코드 구조 상세 설명서</span>
+    </div>
+    <button class="btn-print" onclick="window.print()">🖨️ PDF로 저장 / 인쇄하기</button>
+  </div>
+
+  <div class="a4-sheet">
+    <!-- 문서 헤더 -->
+    <div class="doc-header">
+      <div class="doc-badge">ARCHITECTURE &amp; CODE SPECIFICATION</div>
+      <h1 class="doc-title">Trip.AI 코드 파일(초안) — 역할 및 코드 구조 상세 설명서</h1>
+      <p class="doc-subtitle">프론트엔드 단일 페이지 웹앱(Trip.html) 및 백엔드 Gemini API 프록시 서버(server/llm-proxy.js) 기술 분석 문서</p>
+      <div class="doc-meta">
+        <span><strong>작성일:</strong> 2026-10-29</span>
+        <span><strong>분석 대상 1:</strong> Trip.html (총 3,239줄 · 프론트엔드 SPA)</span>
+        <span><strong>분석 대상 2:</strong> server/llm-proxy.js (총 106줄 · Node.js 백엔드 프록시)</span>
+      </div>
+    </div>
+
+    <!-- 1. 전체 개요 -->
+    <h2 class="section-title"><span class="sec-num">SECTION 01</span>프로젝트 전체 개요 및 파일 간 상호작용</h2>
+    <p>
+      <strong>Trip.AI 코드 파일(초안)</strong>은 사용자의 여행 조건(출발 집 위치, 여행지, 숙소, 여행 기간, 세부 시간, 6종 이동 교통수단 조합)을 입력받아 AI 맞춤형 여행 일정을 생성하고, 장소별 확정·보류(차선책 교체) 및 대화형 재요청을 거쳐 최종 일정 타임라인, 구간별 예상 교통비, 실제 도로 기반 루트 지도를 제공하는 웹 애플리케이션입니다.
+    </p>
+
+    <div class="arch-box">
+      <div class="arch-title">전체 시스템 데이터 흐름 및 연동 아키텍처</div>
+      <div class="arch-grid">
+        <div class="arch-node primary">
+          <div class="arch-node-title">브라우저 클라이언트 (Trip.html)</div>
+          <div class="arch-node-desc">
+            • Step 1: 조건 입력 / 한글 초성 자동완성<br>
+            • Step 2: 장소 확정·보류 / AI 재요청<br>
+            • Step 3: 타임라인·교통비·Leaflet 지도
+          </div>
+        </div>
+        <div class="arch-arrow">
+          POST /api/llm<br>──────►<br><span style="font-size:7.2pt;color:#64748b">(또는 직접 호출)</span>
+        </div>
+        <div class="arch-node proxy">
+          <div class="arch-node-title">백엔드 프록시 (server/llm-proxy.js)</div>
+          <div class="arch-node-desc">
+            • Nginx 리버스 프록시 뒷단 구동<br>
+            • 서버 환경변수 <code>GEMINI_API_KEY</code> 은닉<br>
+            • 200KB 본문 제한 &amp; 추론 설정 최적화
+          </div>
+        </div>
+        <div class="arch-arrow">
+          HTTPS REST<br>──────►<br>◄──────
+        </div>
+        <div class="arch-node">
+          <div class="arch-node-title">외부 연동 API 생태계</div>
+          <div class="arch-node-desc">
+            • <strong>Google Gemini API</strong>: 일정/주변 추천 생성<br>
+            • <strong>Nominatim / OSRM</strong>: 지오코딩·실제 도로 경로<br>
+            • <strong>Overpass API</strong>: OSM 반경 1.5km 관광지 탐색
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:16%">파일 경로</th>
+          <th style="width:9%">분량</th>
+          <th style="width:15%">담당 계층</th>
+          <th style="width:36%">핵심 역할 요약</th>
+          <th style="width:24%">사용 기술 및 외부 연동</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Trip.html</strong></td>
+          <td>3,239줄</td>
+          <td>프론트엔드 웹앱 (단일 파일 SPA)</td>
+          <td>3단계 UI(조건 입력 → 장소 확정/보류 → 최종 루트/지도/인쇄), 한글 초성 검색, LLM 프롬프트 조립 및 JSON 정규화, 구간별 교통비 시뮬레이션, 인터랙티브 지도 시각화</td>
+          <td>Tailwind CSS, Font Awesome, Leaflet.js, Google Maps Embed, Nominatim, OSRM, Overpass API</td>
+        </tr>
+        <tr>
+          <td><strong>server/llm-proxy.js</strong></td>
+          <td>106줄</td>
+          <td>백엔드 API 프록시 서버</td>
+          <td>브라우저에 API 키를 노출하지 않고 서버 환경변수(<code>GEMINI_API_KEY</code>)를 사용해 프론트엔드의 <code>POST /api/llm</code> 요청을 Google Gemini API로 대리 호출</td>
+          <td>Node.js 18+ 내장 <code>http</code>, <code>fetch</code> 모듈 (외부 패키지 의존성 0개), Nginx 연동</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- 2. Trip.html 상세 분석 -->
+    <h2 class="section-title"><span class="sec-num">SECTION 02</span>Trip.html 상세 분석 — 프론트엔드 메인 애플리케이션</h2>
+    <p>
+      <strong>Trip.html</strong>은 별도의 빌드 도구나 프레임워크 없이 브라우저에서 즉시 동작하도록 <strong>HTML 마크업 + 커스텀 다크 테마 CSS + 8개 모듈의 JavaScript 로직</strong>을 단일 파일에 담아낸 애플리케이션입니다. LLM이 연결되지 않은 상태에서도 내장된 제주도 샘플 데이터와 OpenStreetMap API만으로 전체 기능을 체험할 수 있도록 설계되어 있습니다.
+    </p>
+
+    <h3 class="sub-title">2.1 Trip.html이 담당하는 4대 핵심 역할</h3>
+    <div class="role-grid">
+      <div class="role-card">
+        <div class="role-card-head"><span class="role-badge">역할 1</span>여행 조건 수집 및 상호배타 규칙 제어 (Step 1)</div>
+        <p>
+          출발/복귀 집 위치, 여행지, 숙소, 기간, 식사 횟수(1~3끼), 세부 시간(시작·숙소 복귀·마지막 날 체크아웃)을 입력받습니다. 한글 유니코드 분해 기반의 <strong>초성 자동완성</strong>(예: <code>ㄱㄹ</code> → 강릉시, <code>ㅁㅍ</code> → 목포시)과 <strong>6종 교통수단 선택 규칙</strong>(자가용 단독 선택 강제, 나머지 5종 복합 조합 허용)을 실시간 제어합니다.
+        </p>
+      </div>
+      <div class="role-card">
+        <div class="role-card-head"><span class="role-badge">역할 2</span>AI 일정 초안 생성 및 확정·보류 워크플로우 (Step 2)</div>
+        <p>
+          사용자 조건과 JSON 스키마를 조합해 LLM에 일정을 요청합니다. 제안된 각 장소 카드는 우측에 다크톤 Google 미니 지도를 표시하며, <strong>[보류 (차선책)]</strong> 선택 시 대체 장소(<code>alternatives</code>) 목록을 펼쳐 즉시 교체·확정할 수 있습니다. 자연어 <strong>AI 재요청</strong>과 이전 목록 <strong>되돌리기(Undo)</strong>도 지원합니다.
+        </p>
+      </div>
+      <div class="role-card">
+        <div class="role-card-head"><span class="role-badge">역할 3</span>타임라인·교통비 계산 및 버스 vs 택시 비교 (Step 3 좌측)</div>
+        <p>
+          첫날 집 출발부터 마지막 날 숙소 체크아웃(<code>checkoutTime</code>) 후 집 복귀까지 분 단위로 시간을 누적 계산합니다. 구간별 거리(Haversine × 보정계수 <code>1.28</code>)를 바탕으로 항공·여객선·렌터카·자가용·버스·택시 비용과 소요 시간을 산출하며, <strong>대중교통+택시 모드</strong>에서는 구간별로 두 수단을 클릭해 전환·비교할 수 있습니다.
+        </p>
+      </div>
+      <div class="role-card">
+        <div class="role-card-head"><span class="role-badge">역할 4</span>인터랙티브 루트 지도 및 주변 추천 탐색 (Step 3 우측)</div>
+        <p>
+          <strong>Leaflet</strong> 지도 위에 5종 배경 타일(구글 다크/일반/위성, OSM 다크/일반)과 숨쉬기(Breathing) 마커를 표시합니다. 지역 내 이동은 <strong>OSRM</strong>으로 실제 도로 곡선 경로와 구간 중앙 교통수단 아이콘을 그리며, <strong>루트 주변 추천 더 보기</strong>를 통해 AI 또는 Overpass API로 반경 1.5km 내 명소를 추가 탐색합니다.
+        </p>
+      </div>
+    </div>
+
+    <h3 class="sub-title">2.2 Trip.html 코드 구성 ① — 헤드(CSS) 및 HTML 레이아웃 영역 (Lines 1–730)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:12%">영역 구분</th>
+          <th style="width:13%">라인 범위</th>
+          <th style="width:23%">세부 블록 명칭</th>
+          <th style="width:52%">주요 구현 내용 및 UI 설계 특징</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="tag tag-css">HEAD / CSS</span></td>
+          <td>Lines 1–15</td>
+          <td>외부 라이브러리 로드</td>
+          <td>Tailwind CSS CDN, Font Awesome 6.4 아이콘, Leaflet 1.9.4 CSS/JS(무료 지도 엔진), Pretendard 웹폰트 로드</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-css">HEAD / CSS</span></td>
+          <td>Lines 17–82</td>
+          <td>다크 테마 &amp; 공통 컴포넌트</td>
+          <td><code>#070b14</code> 다크 배경, 3중 방사형 배경 광원(<code>body::before</code>), 블러 카드(<code>.card</code>), 입력 필드(<code>.field</code>), 버튼(<code>.btn-primary</code>, <code>.btn-ghost</code>) 정의</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-css">HEAD / CSS</span></td>
+          <td>Lines 83–180</td>
+          <td>Step 1 폼 &amp; 교통수단 카드</td>
+          <td>시간 설정 카드(<code>.time-card</code>), 선택/비활성 상태를 표현하는 교통수단 카드(<code>.transport-card.is-checked</code>, <code>.is-disabled</code>), 초성 자동완성 드롭다운(<code>.ac-list</code>)</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-css">HEAD / CSS</span></td>
+          <td>Lines 181–289</td>
+          <td>지도 필터·애니메이션·인쇄</td>
+          <td>구글/Leaflet 배경 타일 다크모드 반전 필터(<code>.map-dark</code>, <code>.map-tile-dark</code>), 숨쉬는 마커(<code>.breath</code>), 흐르는 경로 점선(<code>.route-flow</code>), 인쇄 전용 <code>@media print</code></td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-html">HTML BODY</span></td>
+          <td>Lines 294–316</td>
+          <td>상단 고정 네비게이션 헤더</td>
+          <td>서비스 로고, 1~3단계 진행 표시줄(<code>#nav-step1~3</code>), 우측 상단 AI 연결 상태 표시등(<code>#llm-dot</code>) 및 설정 버튼(<code>openSettings()</code>)</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-html">HTML BODY</span></td>
+          <td>Lines 321–491</td>
+          <td>STEP 1: 초기 조건 입력 섹션</td>
+          <td>① 장소(여행지 <code>#destination</code>, 내 집 <code>#home</code>, 숙소 <code>#accommodation</code>), ② 기간·식사 횟수, ③ 시간 3종(시작·복귀·체크아웃), ④ 6종 교통수단 카드 그리드</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-html">HTML BODY</span></td>
+          <td>Lines 494–549</td>
+          <td>STEP 2: 장소 확정/보류 섹션</td>
+          <td>자연어 수정 요청 입력창(<code>#ai-reprompt</code>), 빠른 요청 칩(<code>.quick-req</code>), 되돌리기 버튼(<code>#undo-btn</code>), 장소 카드 리스트(<code>#places-container</code>), 하단 확정 바</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-html">HTML BODY</span></td>
+          <td>Lines 552–636</td>
+          <td>STEP 3: 최종 루트/출력 섹션</td>
+          <td>일정 요약 카드(<code>#trip-summary</code>), 인쇄/PDF 저장 버튼(<code>window.print()</code>), 좌측 타임라인(<code>#final-timeline</code>), 우측 Leaflet 루트 지도(<code>#route-map</code>)</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-html">HTML BODY</span></td>
+          <td>Lines 640–730</td>
+          <td>AI 설정 모달 &amp; 오버레이</td>
+          <td>LLM 연결 방식 선택 모달(<code>#settings-modal</code>: Gemini API 직접 vs 백엔드 프록시), 모델 자동 찾기, 연결 테스트 결과창, 로딩 오버레이(<code>#loading-overlay</code>), 토스트 컨테이너</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <h3 class="sub-title">2.3 Trip.html 코드 구성 ② — JavaScript 비즈니스 로직 8개 모듈 (Lines 732–3237)</h3>
+    <p>
+      <code>&lt;script&gt;</code> 내부 코드는 역할에 따라 8개의 독립적인 논리 섹션으로 구분되어 있습니다. 특히 Step 2에서 카드의 확정/보류 상태를 바꿀 때 전체 카드를 다시 그리지 않고 텍스트·버튼·차선책 영역만 부분 갱신하여 Google Maps <code>iframe</code>이 불필요하게 새로고침되는 현상을 방지하고, 지오코딩(<code>geoCache</code>)과 도로 경로(<code>routeCache</code>)를 메모리에 캐싱하는 등 최적화가 적용되어 있습니다.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:15%">JS 모듈 섹션</th>
+          <th style="width:13%">라인 범위</th>
+          <th style="width:27%">핵심 변수 및 주요 함수</th>
+          <th style="width:45%">담당 기능 및 내부 동작 원리</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="tag tag-js">섹션 0</span><br><strong>샘플 데이터 &amp; 전역 상태</strong></td>
+          <td>Lines 733–889</td>
+          <td>
+            <code>itineraryData</code>, <code>accomLocation</code>, <code>homeLocation</code>, <code>legModeOverrides</code>, <code>finalPlaces</code>, <code>DAY_COLORS</code>
+          </td>
+          <td>
+            • 제주 1박 2일 기본 샘플 데이터(7개 코스와 각각의 위경도, <code>alternatives</code> 대안 2곳, <code>nearby</code> 주변 추천 스팟 포함) 정의<br>
+            • 집·숙소 기준 좌표, 구간별 교통수단 수동 선택 오버라이드 객체, 재요청 복원용 <code>previousSnapshot</code> 관리
+          </td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-js">섹션 1</span><br><strong>공통 유틸리티 &amp; 조건 파싱</strong></td>
+          <td>Lines 890–965,<br>1316–1375</td>
+          <td>
+            <code>haversine()</code>, <code>getFormConditions()</code>, <code>countDays()</code>, <code>toast()</code>, <code>showLoading()</code>
+          </td>
+          <td>
+            • 두 위경도 좌표 간 구면 거리(m) 계산(<code>haversine</code>) 및 HTML 특수문자 이스케이프(<code>esc</code>)<br>
+            • <code>getFormConditions()</code>: Step 1의 모든 입력값과 6종 교통수단 체크 상태를 읽어 내부 이동 모드(<code>car</code> / <code>rental</code> / <code>transit</code> / <code>transit+taxi</code>)로 정규화
+          </td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-js">섹션 1-B</span><br><strong>한글 초성 지역 자동완성</strong></td>
+          <td>Lines 966–1201</td>
+          <td>
+            <code>extractChosung()</code>, <code>KR_REGIONS</code>, <code>searchRegions()</code>, <code>findRegionCoords()</code>, <code>setupAutocomplete()</code>
+          </td>
+          <td>
+            • 한글 완성형 음절(<code>0xAC00</code>~<code>0xD7A3</code>)에서 초성 인덱스를 계산해 초성 문자열 추출<br>
+            • 전국 권역별 주요 도시·관광지 사전(<code>KR_REGIONS</code>, 위경도 포함)을 대상으로 완전일치·접두일치·초성일치 점수를 매겨 드롭다운 자동완성 및 키보드 탐색 지원
+          </td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-js">섹션 1-C</span><br><strong>교통수단 6종 선택 규칙</strong></td>
+          <td>Lines 1203–1314</td>
+          <td>
+            <code>TRANSPORT_KEYS</code>, <code>handleTransportCardClick()</code>, <code>syncTransportUI()</code>
+          </td>
+          <td>
+            • <code>자가용(car)</code> 선택 시 다른 5개 수단(렌터카·대중교통·택시·비행기·여객선)을 자동 해제 및 비활성화하고, 자가용이 켜진 상태에서 타 수단 클릭 시 토스트 경고 표시<br>
+            • 자가용 미선택 시에는 항공+렌터카, 여객선+대중교통+택시 등 다중 조합을 허용하고 하단 안내 배너(<code>#transport-hint</code>)에 조합 효과를 실시간 설명
+          </td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-js">섹션 2 &amp; 3</span><br><strong>단계 전환 &amp; Step 2 장소 카드</strong></td>
+          <td>Lines 1376–1567</td>
+          <td>
+            <code>goToStep()</code>, <code>handleFormSubmit()</code>, <code>renderStep2Places()</code>, <code>updatePlaceCard()</code>, <code>setPlaceStatus()</code>, <code>replacePlace()</code>
+          </td>
+          <td>
+            • Step 1 폼 제출 시 교통수단 선택 여부를 검증하고, LLM 연결 시 AI 초안을 생성하여 Step 2로 이동<br>
+            • <code>updatePlaceCard()</code>는 카드 내 텍스트/버튼과 차선책 목록만 갱신하고, 장소명이 실제로 변경된 경우에만 미니 지도 <code>iframe</code>을 교체하여 깜빡임 방지<br>
+            • <code>replacePlace()</code>는 선택한 차선책을 메인 장소로 올리고 기존 장소를 차선책 슬롯으로 이동시킨 뒤 즉시 <code>confirmed</code> 상태로 전환
+          </td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-js">섹션 4</span><br><strong>LLM 연동 &amp; 설정 모달</strong></td>
+          <td>Lines 1569–2073</td>
+          <td>
+            <code>callLLM()</code>, <code>buildGenConfig()</code>, <code>buildItineraryPrompt()</code>, <code>normalizeItinerary()</code>, <code>handleReprompt()</code>, <code>testLLMConnection()</code>
+          </td>
+          <td>
+            • <code>provider</code> 설정에 따라 백엔드 프록시(<code>/api/llm</code>) 또는 Gemini REST API를 호출하며, Gemini 3(<code>thinkingLevel: 'low'</code>) 및 2.5 Flash(<code>thinkingBudget: 0</code>) 추론 지연 방지 설정 자동 적용<br>
+            • 무료 서버 대기열 타임아웃·503·429 발생 시 빠른 모델(<code>gemini-2.5-flash</code>)로 자동 폴백<br>
+            • API 키로 사용 가능한 모델 목록을 실시간 조회(<code>queryModelsForKey</code>)하고 2단계 연결 진단 테스트 수행
+          </td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-js">섹션 5</span><br><strong>Step 3 타임라인 &amp; 교통비 계산</strong></td>
+          <td>Lines 2075–2631</td>
+          <td>
+            <code>estimateLeg()</code>, <code>selectLegMode()</code>, <code>finalizeRoute()</code>, <code>renderTripSummary()</code>, <code>renderLegNodeHtml()</code>, <code>renderTimeline()</code>
+          </td>
+          <td>
+            • <code>estimateLeg()</code>: 두 노드 간 거리와 장거리/제주 도항 여부(<code>isIntercity</code>, <code>isJejuCross</code>)를 판별해 항공·여객선·렌터카·자가용·버스·택시 각각의 예상 요금과 소요 시간을 산출<br>
+            • 첫날 집 출발 시각부터 마지막 날 체크아웃 시각(<code>checkoutTime</code>) 이후 잔여 관람 및 최종 집 도착 예상 시각까지 순차 계산하여 타임라인과 상단 4열 요약 카드 렌더링
+          </td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-js">섹션 6 &amp; 7</span><br><strong>Leaflet 지도·도로 경로·주변 탐색</strong></td>
+          <td>Lines 2633–3236</td>
+          <td>
+            <code>initMap()</code>, <code>geocode()</code>, <code>ensureCoordinates()</code>, <code>fetchRoadRoute()</code>, <code>computeLegMidpoints()</code>, <code>renderRouteMap()</code>, <code>fetchMoreNearby()</code>
+          </td>
+          <td>
+            • 내장 지역 사전(<code>KR_REGIONS</code>) 우선 매칭 후 미등록 장소만 Nominatim API로 지오코딩<br>
+            • 지역 내 이동 구간은 <strong>OSRM</strong> 서버에서 실제 도로 폴리라인 좌표를 받아 그려주고, 도로 곡선 길이의 정중앙 지점을 계산(<code>computeLegMidpoints</code>)해 이동수단 아이콘 마커 배치<br>
+            • <code>fetchMoreNearby()</code>: LLM 연결 시 AI 추천 스팟을, 미연결 시 <strong>Overpass API</strong>로 반경 1.5km 내 실제 관광/역사 POI를 검색해 지도에 추가
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- 3. server/llm-proxy.js 상세 분석 -->
+    <h2 class="section-title"><span class="sec-num">SECTION 03</span>server/llm-proxy.js 상세 분석 — 백엔드 LLM 프록시 서버</h2>
+    <p>
+      <strong>server/llm-proxy.js</strong>는 외부에 공개되는 웹사이트 운영 시 브라우저에 <code>GEMINI_API_KEY</code>가 노출되지 않도록 서버 측에서 대신 Gemini API를 호출해 주는 백엔드 프록시입니다. 별도의 <code>npm install</code> 과정 없이 <strong>Node.js 18+ 내장 모듈(<code>http</code>, <code>fetch</code>)만으로 동작</strong>하도록 106줄로 응집도 높게 구현되어 있습니다.
+    </p>
+
+    <h3 class="sub-title">3.1 server/llm-proxy.js의 3대 핵심 역할</h3>
+    <ul class="clean-list">
+      <li><strong>API 키 서버 은닉 및 실행 보호:</strong> 클라이언트는 API 키를 전혀 알 필요 없이 <code>POST /api/llm</code>으로 프롬프트만 보내고, 서버는 운영체제 환경변수(<code>process.env.GEMINI_API_KEY</code>)에서 키를 읽어 Google 서버와 통신합니다. 환경변수가 없으면 즉시 구동이 중단(<code>process.exit(1)</code>)됩니다.</li>
+      <li><strong>보안 가드 및 페이로드 용량 제한:</strong> 요청 스트림을 읽는 단계에서 <code>MAX_BODY</code>(200KB) 초과 시 즉시 소켓을 파기(<code>req.destroy()</code>)하여 비정상적인 대용량 요청을 차단하고, <code>POST /api/llm</code> 외의 모든 경로에 <code>404 Not Found</code>를 반환합니다.</li>
+      <li><strong>모델별 추론(Thinking) 제어 및 폴백:</strong> <code>responseMimeType: 'application/json'</code> 강제 지정과 함께 모델별 <code>thinkingConfig</code>를 설정하며, 호환되지 않는 모델에서 <code>400</code> 응답이 오면 자동으로 일반 모드로 재시도한 뒤 내부 추론 파트(<code>p.thought</code>)를 제외한 최종 텍스트만 추출합니다.</li>
+    </ul>
+
+    <h3 class="sub-title">3.2 server/llm-proxy.js 코드 구간별 상세 구성 (총 106줄)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:16%">코드 구간</th>
+          <th style="width:12%">라인 범위</th>
+          <th style="width:24%">핵심 심볼 및 함수</th>
+          <th style="width:48%">상세 동작 및 구현 내용</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="tag tag-srv">구간 1</span><br><strong>배포 가이드 주석</strong></td>
+          <td>Lines 1–19</td>
+          <td>상단 JSDoc 블록</td>
+          <td>PowerShell 실행법(<code>$env:GEMINI_API_KEY="..."; node server/llm-proxy.js</code>), Nginx 리버스 프록시 설정(<code>location /api/</code>), 요청/응답 JSON 포맷 명세</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-srv">구간 2</span><br><strong>환경변수 및 초기 검증</strong></td>
+          <td>Lines 20–30</td>
+          <td><code>PORT</code>, <code>API_KEY</code>, <code>MODEL</code>, <code>MAX_BODY</code></td>
+          <td>기본 포트 <code>8787</code>, 기본 모델 <code>gemini-3.8-flash</code>, 최대 본문 <code>200KB</code> 상수 선언 및 <code>GEMINI_API_KEY</code> 누락 시 에러 출력 후 종료</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-srv">구간 3</span><br><strong>HTTP 입출력 유틸리티</strong></td>
+          <td>Lines 32–54</td>
+          <td><code>send(res, status, obj)</code>,<br><code>readBody(req)</code></td>
+          <td><code>send()</code>는 UTF-8 JSON 헤더 및 CORS 헤더(<code>Access-Control-Allow-*</code>) 설정 후 응답 종료. <code>readBody()</code>는 청크 누적 크기를 검사하며 UTF-8 문자열로 변환</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-srv">구간 4</span><br><strong>Gemini API 호출부</strong></td>
+          <td>Lines 56–87</td>
+          <td><code>callGemini(system, prompt)</code>,<br><code>sendReq(useThinkingConfig)</code></td>
+          <td>110초 타임아웃(<code>AbortSignal.timeout(110000)</code>)으로 Gemini REST API 호출. <code>thinkingConfig</code> 미지원 400 에러 시 자동 재시도 후 <code>!p.thought</code> 파트만 결합해 반환</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-srv">구간 5</span><br><strong>라우팅 및 서버 리스닝</strong></td>
+          <td>Lines 89–105</td>
+          <td><code>http.createServer(...)</code></td>
+          <td><code>OPTIONS</code> 프리플라이트(204), <code>POST /api/llm</code> 라우팅(404), <code>body.prompt</code> 검증(400), 빈 응답 처리(502), 예외 처리(500) 후 <code>127.0.0.1:8787</code> 바인딩</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- 4. 연동 흐름 및 실행 가이드 -->
+    <h2 class="section-title"><span class="sec-num">SECTION 04</span>두 파일의 연동 흐름 및 Nginx 운영 가이드</h2>
+    <ol class="clean-list">
+      <li><strong>프롬프트 생성 (Trip.html):</strong> 사용자가 일정 생성, AI 재요청, 또는 주변 추천 더 보기를 실행하면 <code>buildItineraryPrompt()</code> 또는 <code>fetchNearbyFromLLM()</code>이 여행 조건과 JSON 스키마를 조합합니다.</li>
+      <li><strong>프록시 호출 (Trip.html → Nginx):</strong> <code>callLLM()</code> 함수가 <code>POST /api/llm</code> 엔드포인트로 <code>{ system, prompt }</code> JSON 페이로드를 전송합니다.</li>
+      <li><strong>리버스 프록시 전달 (Nginx → llm-proxy.js):</strong> Nginx가 <code>/api/</code> 요청을 로컬 루프백(<code>http://127.0.0.1:8787/api/llm</code>)에서 대기 중인 Node.js 프로세스로 포워딩합니다.</li>
+      <li><strong>Gemini 대리 호출 및 정제 (llm-proxy.js → Google):</strong> <code>callGemini()</code>가 서버의 <code>GEMINI_API_KEY</code>로 Gemini API를 호출하고 순수 JSON 응답 텍스트를 추출해 <code>200 { "text": "..." }</code>로 반환합니다.</li>
+      <li><strong>정규화 및 UI 렌더링 (Trip.html):</strong> <code>parseLLMJson()</code>과 <code>normalizeItinerary()</code>가 응답을 검증·정규화하여 Step 2 장소 카드 또는 Step 3 타임라인·지도를 즉시 업데이트합니다.</li>
+    </ol>
+
+    <div class="callout warn">
+      <div class="callout-title">Nginx 연동 및 서버 구동 시 핵심 체크포인트</div>
+      • <strong>PowerShell 프록시 서버 실행:</strong> <code>$env:GEMINI_API_KEY="발급받은_API_키"; node server/llm-proxy.js</code><br>
+      • <strong>Nginx 설정 (conf/nginx.conf):</strong> <code>server { ... }</code> 블록 내부에 <code>location /api/ { proxy_pass http://127.0.0.1:8787; proxy_read_timeout 120s; }</code>를 추가한 뒤 <code>nginx -s reload</code>를 실행하고, <strong>Trip.html</strong> 우측 상단 <strong>[AI 설정] → [백엔드 프록시] → URL: <code>/api/llm</code></strong>으로 저장하면 연동이 완료됩니다.
+    </div>
+
+    <div class="doc-footer">
+      <span>Trip.AI 코드 파일(초안) — 아키텍처 및 코드 구조 상세 설명서</span>
+      <span>대상 파일: Trip.html / server/llm-proxy.js</span>
+    </div>
+  </div>
+
+</body>
+</html>
